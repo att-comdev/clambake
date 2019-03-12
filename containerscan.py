@@ -203,7 +203,14 @@ class Scanner():
                     print(exc)
                     sys.exit(0)
             for imageName in f['data']['images_refs']['images'].values():
-                self.imageList.append(imageName)
+                if imageName.find("DOCKER_") != -1:
+                    dockerDomain = os.environ.get('dockerDomain')
+                    dockerOpenDomain = os.environ.get('dockerOpenDomain')
+                    image=imageName.replace("DOCKER_DOMAIN", dockerDomain).replace(
+                        "DOCKER_OPEN_DOMAIN", dockerOpenDomain)
+                    self.imageList.append(image)
+                else:
+                    self.imageList.append(imageName)
             shutil.rmtree(tempGitDirectory)
         else:
             self.imageList.append(self.imageToScan)
