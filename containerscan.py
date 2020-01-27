@@ -71,7 +71,7 @@ class Scanner():
             self.gerritUser = os.environ.get('gerritUsername')
         else:
             print "Gerrit Username is not specified."
-            sys.exit(0)
+            print "Make sure your job clones the required repo"
 
         if os.environ.get('dockerUsername') is not None:
             self.dockerUser = os.environ.get('dockerUsername')
@@ -191,20 +191,22 @@ class Scanner():
 
         self.imageList = []
         if self.scanType == 'imageList':
-            cloneLink = 'ssh://%s@%s' % (self.gerritUser, self.repoToScan)
-            tempGitDirectory = tempfile.mkdtemp()
-            git.Repo.clone_from(cloneLink, tempGitDirectory, branch='master',
-                depth=1)
-            imagesFilePath = os.path.join(tempGitDirectory, self.fileToScan)
-            with open(imagesFilePath, 'r') as stream:
-                try:
-                    f = yaml.safe_load(stream)
-                except yaml.YAMLError as exc:
-                    print(exc)
-                    sys.exit(0)
+            if self.gerritUser is not None:
+                cloneLink = 'ssh://%s@%s' % (self.gerritUser, self.repoToScan)
+                tempGitDirectory = tempfile.mkdtemp()
+                git.Repo.clone_from(cloneLink, tempGitDirectory, branch='master',
+                    depth=1)
+                imagesFilePath = os.path.join(tempGitDirectory, self.fileToScan)
+                with open(imagesFilePath, 'r') as stream:
+                    try:
+                        f = yaml.safe_load(stream)
+                    except yaml.YAMLError as exc:
+                        print(exc)
+                        sys.exit(0)            
             for imageName in f['data']['images_refs']['images'].values():
                 self.imageList.append(imageName)
-            shutil.rmtree(tempGitDirectory)
+            if self.gerritUser is not None:    
+                shutil.rmtree(tempGitDirectory)
         else:
             self.imageList.append(self.imageToScan)
 
