@@ -112,13 +112,18 @@ class Scanner():
                 sys.exit(0)
 
         elif os.environ.get('scanType') == 'imageList':
-            if os.environ.get('repoToScan') is not None:
-                self.repoToScan = os.environ.get('repoToScan')
-                self.scanType = os.environ.get('scanType')
-            else:
-                print "scanType is set to imageList but repoToScan is not specified"
-                sys.exit(0)
+            self.scanType = os.environ.get('scanType')
+            if self.gerritUser is not None:
+                if os.environ.get('repoToScan') is not None:
+                    self.repoToScan = os.environ.get('repoToScan')
+                else:
+                    print "scanType is set to imageList and gerrit username is specified but repoToScan is not specified"
+                    sys.exit(0)
             if os.environ.get('fileToScan') is not None:
+                if self.gerritUser is None:
+                    print "Make sure fileToScan has the relative path to file"
+                else:
+                    print "Make sure filetoScan has just the file name"
                 self.fileToScan = os.environ.get('fileToScan')
             else:
                 print "scanType is set to imageList but fileToScan is not specified"
@@ -191,11 +196,14 @@ class Scanner():
 
         self.imageList = []
         if self.scanType == 'imageList':
-            cloneLink = 'ssh://%s@%s' % (self.gerritUser, self.repoToScan)
-            tempGitDirectory = tempfile.mkdtemp()
-            git.Repo.clone_from(cloneLink, tempGitDirectory, branch='master',
-                depth=1)
-            imagesFilePath = os.path.join(tempGitDirectory, self.fileToScan)
+            if self.gerritUser is not None:
+                cloneLink = 'ssh://%s@%s' % (self.gerritUser, self.repoToScan)
+                tempGitDirectory = tempfile.mkdtemp()
+                git.Repo.clone_from(cloneLink, tempGitDirectory, branch='master',
+                    depth=1)
+                imagesFilePath = os.path.join(tempGitDirectory, self.fileToScan)
+            else:
+                imagesFilePath = self.fileToScan
             with open(imagesFilePath, 'r') as stream:
                 try:
                     f = yaml.safe_load(stream)
@@ -211,7 +219,8 @@ class Scanner():
                     self.imageList.append(image)
                 else:
                     self.imageList.append(imageName)
-            shutil.rmtree(tempGitDirectory)
+            if self.gerritUser is not None:        
+                shutil.rmtree(tempGitDirectory)
         else:
             self.imageList.append(self.imageToScan)
 
