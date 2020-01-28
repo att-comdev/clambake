@@ -41,7 +41,6 @@ class Scanner():
 
         Required Variables:
         dockerServer (docker server for docker login ex: docker-server.domain.com)
-        gerritUsername (username used to access code base)
         dockerUsername (username used in docker login comamand)
         dockerPassword (password used in docker login command)
         reportDirectory (full path where script should place reports)
@@ -50,6 +49,7 @@ class Scanner():
         scanType (singleImage - scans a single image, imageList - scans a list of images)
 
         Optional Variables:
+        gerritUsername (username used to access code base)
         previouslyScannedFile (full path to a previous report)
         imageToScan (requires scanType=SingleImage, name of single image to scan)
         repoToScan (requires scanType=imageList, pull list of images from repo, ex: gerrit-server.domain.com:port/repo.git)
@@ -120,10 +120,6 @@ class Scanner():
                     print "scanType is set to imageList and gerrit username is specified but repoToScan is not specified"
                     sys.exit(0)
             if os.environ.get('fileToScan') is not None:
-                if self.gerritUser is None:
-                    print "Make sure fileToScan has the relative path to file"
-                else:
-                    print "Make sure filetoScan has just the file name"
                 self.fileToScan = os.environ.get('fileToScan')
             else:
                 print "scanType is set to imageList but fileToScan is not specified"
