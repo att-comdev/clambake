@@ -224,7 +224,7 @@ class Scanner():
         If encountering errors at this step, ensure docker login credentials are
         correct, and the user has appropriate permissions.
         """
-
+        image_name = image_name.split('/')[-1]
         tar_path = '%s/%s.tar' % (self.tempDirectory,
             image_name.replace('/','.').replace(':','.').replace('@','.'))
         tarball = open(tar_path, 'w')
