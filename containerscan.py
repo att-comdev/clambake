@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import subprocess
-import extractnested
 import os
 import sys
 import datetime
@@ -11,6 +10,8 @@ import tempfile
 import pdb
 import re
 import errno
+import tarfile
+import tempfile
 
 class Scanner():
     def __init__(self):
@@ -276,6 +277,39 @@ class Scanner():
             shutil.rmtree(dir_path)
             os.remove(tar_path)
 
+    def safeNewDirectory(self, dir_path):
+        """From a proposed path, creates and returns a safe directory path."""
+        if os.path.exists(dir_path):
+            prefix = os.path.basename(dir_path)
+            directory = os.path.dirname(dir_path)
+            dir_path = tempfile.mkdtemp(prefix=prefix, dir=directory)
+        return dir_path
+
+    def unTar(self, tar_path, dir_path):
+        """Untars a file to a directory, and then removes the tarball."""
+        print "Extracting '%s' to '%s'" % (tar_path, dir_path)
+        tar = tarfile.open(tar_path)
+        tar.extractall(dir_path)
+        tar.close()
+        os.remove(tar_path)
+
+    def recursiveExtractor(self, dir_path):
+        """Walks a directory untaring all nested tarfiles within it."""
+        dir_contents = os.listdir(dir_path)
+        for item in dir_contents:
+            item_fullpath = os.path.join(dir_path, item)
+            if os.path.isdir(item_fullpath):
+                scanner.recursiveExtractor(item_fullpath)
+            elif os.path.isfile(item_fullpath):
+                # NOTE: This is crude but matches the previous behaviour
+                file_extensions = ('.tar', '.tgz', '.tbz', '.tb2', '.tar.gz', '.tar.bz2')
+                filename, file_extension = os.path.splitext(item_fullpath)
+                if file_extension in file_extensions:
+                    print "Found nested tarball at '%s'" % (item_fullpath)
+                    target_dir = filename
+                    scanner.unTar(item_fullpath, scanner.safeNewDirectory(target_dir))
+                    dir_contents.append(target_dir)
+    
     def scanImages(self):
         """Scan each image and add the results to the yaml reports
 
@@ -295,9 +329,14 @@ class Scanner():
             image_results = {imageID: {'layers': [], 'unique_image': True}}
 
             # Save this image, extract it, and get the path to the directory
-            tar_path = scanner.saveImageAsTar(imageID)
+            tar_path = os.path.abspath(scanner.saveImageAsTar(imageID))
             dir_path = os.path.abspath(tar_path.replace('.tar', ''))
-            extractnested.ExtractNested(os.path.abspath(tar_path))
+            
+            # Untar the image into its directory
+            scanner.unTar(tar_path, dir_path)
+
+            # Recursively extract all layers and tarballs within them
+            scanner.recursiveExtractor(dir_path)
 
             for layerID in os.listdir(dir_path):
                 layer_path = os.path.join(dir_path, layerID)
@@ -347,3 +386,4 @@ if __name__ == '__main__':
     scanner.scanImages()
     scanner.determineUniqueImages()
     scanner.generateReport()
+
