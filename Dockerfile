@@ -8,7 +8,7 @@ RUN set -ex ;\
         docker.io ;\
     freshclam
 
-RUN pip install PyYAML gitpython
+RUN pip install --no-cache-dir PyYAML gitpython
 
 COPY . /opt/clambake
 
